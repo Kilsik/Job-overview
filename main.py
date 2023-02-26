@@ -15,41 +15,47 @@ def predict_salary(salary_from, salary_to):
         return int(salary_to * 0.8)
 
 
-def get_vacancy_hh(lang):
+def get_pages_hh(lang):
     url = 'https://api.hh.ru/vacancies'
     all_pages = []
+    id_profession = 96
+    id_region = 1
+    days = 30
+    amount_per_page = 100
     for page in count(0):
         job_params = {
-            "professional_role": '96',
-            "area": '1',
-            "period": '30',
+            "professional_role": id_profession,
+            "area": id_region,
+            "period": days,
             "page": page,
-            "per_page": '100',
+            "per_page": amount_per_page,
             "text": lang,
         }
         response = requests.get(url, params=job_params)
         response.raise_for_status()
-        vacancy_json = response.json()
-        all_pages.append(vacancy_json)
-        if page == vacancy_json['pages'] - 1:
+        vacancies_page = response.json()
+        all_pages.append(vacancies_page)
+        if page == vacancies_page['pages'] - 1:
             break
     return all_pages
 
 
-def get_vacansy_sj(lang):
-    superjob_key = os.environ["SUPERJOB_SECRET_KEY"]
+def get_pages_sj(lang, superjob_key):
     superjob_url = 'https://api.superjob.ru/2.0/vacancies/'
     superjob_headers = {
         'X-Api-App-Id': superjob_key,
     }
     all_pages = []
+    amount_per_page = 100
+    id_town = 4
+    days = 30
+    max_pages = 5
     for page in count(0):
         superjob_params = {
             'page': page,
-            'count': '100',
-            # 'catalogues': 48,
-            'town': 4,
-            'period': 30,
+            'count': amount_per_page,
+            'town': id_town,
+            'period': days,
             'keyword': lang,
             'keywords': ['программист', 'разработчик', 'разработка']
         }
@@ -58,7 +64,7 @@ def get_vacansy_sj(lang):
                                          params=superjob_params)
         superjob_response.raise_for_status()
         all_pages.append(superjob_response.json())
-        if page == 4:
+        if page == max_pages - 1:
             break
     return all_pages
 
@@ -89,19 +95,20 @@ def predict_rub_salary_sj(vacancy):
         return None
     salary_from = vacancy['payment_from']
     salary_to = vacancy['payment_to']
-    if salary_from == 0:
+    if not salary_from:
         salary_from = None
-    if salary_to == 0:
+    if not salary_to:
         salary_to = None
     return predict_salary(salary_from, salary_to)
 
 
 def get_stat_hh(languages):
-    language_prices = []
+    statistic = []
+    min_amount = 100
     for lang in languages:
-        pages = get_vacancy_hh(lang)
+        pages = get_pages_hh(lang)
         amount_vacancies = pages[0]['found']
-        if amount_vacancies <= 100:
+        if amount_vacancies < min_amount:
             continue
         sum_salaries = 0
         amount_salaries = 0
@@ -114,17 +121,17 @@ def get_stat_hh(languages):
                     continue
                 sum_salaries += salary
                 amount_salaries += 1
-        if not amount_salaries == 0:
+        if amount_salaries:
             average_salary = sum_salaries // amount_salaries
-        language_prices.append([lang, amount_vacancies,
+        statistic.append([lang, amount_vacancies,
                                 amount_salaries, average_salary])
-    return language_prices
+    return statistic
 
 
-def get_stat_sj(languages):
-    language_prices = []
+def get_stat_sj(languages, superjob_key):
+    statistic = []
     for lang in languages:
-        pages = get_vacansy_sj(lang)
+        pages = get_pages_sj(lang, superjob_key)
         amount_vacancies = pages[0]['total']
         sum_salaries = 0
         amount_salaries = 0
@@ -137,31 +144,31 @@ def get_stat_sj(languages):
                     continue
                 sum_salaries += salary
                 amount_salaries += 1
-        if not amount_salaries == 0:
+        if amount_salaries:
             average_salary = sum_salaries // amount_salaries
-        language_prices.append([lang, amount_vacancies,
+        statistic.append([lang, amount_vacancies,
                                 amount_salaries, average_salary])
-    return language_prices
+    return statistic
 
 
-def drow_table(lang_prices, title):
-    table_data = [
+def drow_table(statistic, title):
+    table_lines = [
         ['Язык программирования', 'Вакансий найдено', 'Вакансий обработано',
          'Средняя зарплата']
     ]
-    for stat in lang_prices:
+    for stat in statistic:
         lang = stat[0]
         total_vacancies = stat[1]
         treated_vacancies = stat[2]
         average_salary = stat[3]
-        table_data.append([lang, total_vacancies, treated_vacancies,
-                           average_salary])
-    table_instance = AsciiTable(table_data, title)
+        table_lines.append(stat)
+    table_instance = AsciiTable(table_lines, title)
     print(table_instance.table)
 
 
 def main():
     load_dotenv()
+    superjob_key = os.environ["SUPERJOB_SECRET_KEY"]
     languages = [
         'Python',
         'JavaScript',
@@ -181,13 +188,13 @@ def main():
         'R',
         'PowerShell'
     ]
-    language_prices_hh = get_stat_hh(languages)
+    statistic_hh = get_stat_hh(languages)
     title_hh = 'HeadHunter Moscow'
-    drow_table(language_prices_hh, title_hh)
+    drow_table(statistic_hh, title_hh)
     print()
-    language_prices_sj = get_stat_sj(languages)
+    statistic_sj = get_stat_sj(languages, superjob_key)
     title_sj = 'SuperJob Moscow'
-    drow_table(language_prices_sj, title_sj)
+    drow_table(statistic_sj, title_sj)
 
 
 if __name__ == '__main__':
