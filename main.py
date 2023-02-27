@@ -95,10 +95,6 @@ def predict_rub_salary_sj(vacancy):
         return None
     salary_from = vacancy['payment_from']
     salary_to = vacancy['payment_to']
-    if not salary_from:
-        salary_from = None
-    if not salary_to:
-        salary_to = None
     return predict_salary(salary_from, salary_to)
 
 
