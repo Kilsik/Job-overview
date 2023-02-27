@@ -18,14 +18,14 @@ def predict_salary(salary_from, salary_to):
 def get_pages_hh(lang):
     url = 'https://api.hh.ru/vacancies'
     all_pages = []
-    id_profession = 96
-    id_region = 1
+    profession_id = 96
+    region_id = 1
     days = 30
     amount_per_page = 100
     for page in count(0):
         job_params = {
-            "professional_role": id_profession,
-            "area": id_region,
+            "professional_role": profession_id,
+            "area": region_id,
             "period": days,
             "page": page,
             "per_page": amount_per_page,
@@ -47,14 +47,14 @@ def get_pages_sj(lang, superjob_key):
     }
     all_pages = []
     amount_per_page = 100
-    id_town = 4
+    town_id = 4
     days = 30
     max_pages = 5
     for page in count(0):
         superjob_params = {
             'page': page,
             'count': amount_per_page,
-            'town': id_town,
+            'town': town_id,
             'period': days,
             'keyword': lang,
             'keywords': ['программист', 'разработчик', 'разработка']
@@ -151,16 +151,12 @@ def get_stat_sj(languages, superjob_key):
     return statistic
 
 
-def drow_table(statistic, title):
+def draw_table(statistic, title):
     table_lines = [
         ['Язык программирования', 'Вакансий найдено', 'Вакансий обработано',
          'Средняя зарплата']
     ]
     for stat in statistic:
-        lang = stat[0]
-        total_vacancies = stat[1]
-        treated_vacancies = stat[2]
-        average_salary = stat[3]
         table_lines.append(stat)
     table_instance = AsciiTable(table_lines, title)
     print(table_instance.table)
@@ -190,11 +186,11 @@ def main():
     ]
     statistic_hh = get_stat_hh(languages)
     title_hh = 'HeadHunter Moscow'
-    drow_table(statistic_hh, title_hh)
+    draw_table(statistic_hh, title_hh)
     print()
     statistic_sj = get_stat_sj(languages, superjob_key)
     title_sj = 'SuperJob Moscow'
-    drow_table(statistic_sj, title_sj)
+    draw_table(statistic_sj, title_sj)
 
 
 if __name__ == '__main__':
